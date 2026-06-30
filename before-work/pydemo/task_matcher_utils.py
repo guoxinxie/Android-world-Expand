@@ -2,12 +2,6 @@
 共享任务匹配工具模块
 用于 visualize_trace.py 和 analyze_consistency.py 统一的任务名匹配逻辑。
 提供三种分组策略：按模板类型、按精确goal、按时间戳聚类。
-
-核心改进：
-1. 更广的 metadata 文件搜索范围
-2. 覆盖全部 25 种实验任务类型的硬编码匹配器
-3. 多层回退：模板正则 -> 硬编码关键词 -> difflib 模糊匹配
-4. 时间戳聚类：分离同一模板类型的不同种子批次
 """
 import os
 import json
@@ -16,10 +10,10 @@ import difflib
 from datetime import datetime, timedelta
 from functools import lru_cache
 
-# ==================== Metadata 文件发现 ====================
+
 
 def find_metadata_file():
-    """在更广泛的路径中搜索 task_metadata.json"""
+    """搜索 task_metadata.json"""
     possible_paths = [
         "task_metadata.json",
         "android_world/task_metadata.json",
@@ -333,13 +327,7 @@ def extract_timestamp_from_dir(dir_name):
 
 
 def cluster_traces_by_timestamp(traces, time_threshold_seconds=180):
-    """
-    按时间戳将轨迹分入实验组。
-    同一模板类型内，时间戳在阈值内的轨迹属于同一实验组。
-    traces: list of dict，每项需含 'id' (目录名), 'task_name' 字段。
-    返回: list of list
-    """
-    # 先按模板类型分大组
+   
     from collections import defaultdict
     groups_by_type = defaultdict(list)
     for t in traces:
@@ -347,16 +335,15 @@ def cluster_traces_by_timestamp(traces, time_threshold_seconds=180):
 
     all_clusters = []
     for task_name, group in groups_by_type.items():
-        # 为每条轨迹附加时间戳
         for t in group:
             _, ts_str, dt = extract_timestamp_from_dir(t["id"])
             t["_ts_str"] = ts_str
             t["_ts_dt"] = dt if dt else datetime.max
 
-        # 按时间戳排序
+  
         group.sort(key=lambda t: t["_ts_dt"])
 
-        # 聚类
+
         clusters = []
         current = []
         for t in group:
@@ -376,7 +363,6 @@ def cluster_traces_by_timestamp(traces, time_threshold_seconds=180):
 
         all_clusters.extend(clusters)
 
-    # 清理临时字段
     for cluster in all_clusters:
         for t in cluster:
             t.pop("_ts_str", None)
@@ -386,11 +372,7 @@ def cluster_traces_by_timestamp(traces, time_threshold_seconds=180):
 
 
 def group_traces_exact_goal(traces, templates_map=None, difficulty_map=None):
-    """
-    按精确 goal 分组（区分不同种子参数）。
-    同一 goal 的轨迹属于同一实验组。
-    返回: dict，key 为 goal 文本。
-    """
+   
     from collections import defaultdict
     groups = defaultdict(list)
     for trace in traces:
@@ -400,10 +382,7 @@ def group_traces_exact_goal(traces, templates_map=None, difficulty_map=None):
 
 
 def group_traces_experiment(traces, templates_map=None, difficulty_map=None):
-    """
-    实验组分组（推荐）：先按模板类型聚大类，再按时间戳分离不同种子批次。
-    返回: list of dict，每项为 {"label": str, "task_name": str, "goal": str, "traces": list}
-    """
+
     if templates_map is None:
         templates_map = load_template_patterns()
     if difficulty_map is None:
