@@ -13,8 +13,6 @@ from task_matcher_utils import (
 )
 
 
-# ================= 辅助函数 =================
-
 def extract_bounds(xml_path, index):
     if not os.path.exists(xml_path):
         return None
@@ -65,17 +63,13 @@ def get_image_src(rel_path):
 # ================= 主渲染函数 =================
 
 def generate_grouped_report(outputs_dir, templates_map=None, difficulty_map=None, consistency_map=None):
-    """
-    生成中文界面 HTML 分组轨迹对比报告。
-    使用时间戳聚类分组实验组（同一模板类型的不同种子批次被分开）。
-    任务名保持原始英文，仅UI元素使用中文。
-    """
+
     if templates_map is None:
         templates_map = load_template_patterns()
     if difficulty_map is None:
         difficulty_map = load_task_metadata()
 
-    # 收集所有轨迹
+ 
     all_traces = []
     runs = sorted(
         [d for d in os.listdir(outputs_dir) if os.path.isdir(os.path.join(outputs_dir, d))],
@@ -103,7 +97,7 @@ def generate_grouped_report(outputs_dir, templates_map=None, difficulty_map=None
         print(f"在 {outputs_dir} 中未找到有效轨迹")
         return
 
-    # 用时间戳聚类得到实验组
+
     experiment_groups = group_traces_experiment(all_traces, templates_map, difficulty_map)
 
     total_groups = len(experiment_groups)
@@ -197,7 +191,7 @@ def generate_grouped_report(outputs_dir, templates_map=None, difficulty_map=None
   <div class="group-list" id="groupList">
 """)
 
-    # ===== 侧边栏：实验组（原始英文任务名） =====
+   
     for gi, group in enumerate(experiment_groups):
         task_name = group["task_name"]
         sample_goal = escape(group["goal"])
@@ -230,7 +224,7 @@ def generate_grouped_report(outputs_dir, templates_map=None, difficulty_map=None
 <div class="main-content" id="mainContent">
 """)
 
-    # ===== 主内容区 =====
+   
     first_group_id = None
     for gi, group in enumerate(experiment_groups):
         group_id = f"grp-{gi}"
