@@ -19,7 +19,6 @@ from task_matcher_utils import (
     group_traces_experiment,
 )
 
-# ================= 世字体配置 =================
 if platform.system() == "Windows":
     plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "sans-serif"]
 else:
@@ -27,7 +26,6 @@ else:
 plt.rcParams["axes.unicode_minus"] = False
 
 
-# ================= 动作签名解析 =================
 
 def parse_action_signature(action_str):
     m_type = re.search(r"action_type='([^']+)'", str(action_str))
@@ -99,7 +97,7 @@ def normalized_levenshtein(s1, s2):
     ml = max(len(s1), len(s2))
     return 0.0 if ml == 0 else levenshtein(s1, s2) / ml
 
-# ================= 致分类核心辑 =================
+
 
 def get_consistency_type_v2(sequences, thresholds=(0.0, 0.15, 0.35)):
     if not sequences or len(sequences) < 2:
@@ -142,11 +140,9 @@ def get_consistency_type_v2(sequences, thresholds=(0.0, 0.15, 0.35)):
         return 2, metrics
     return 3, metrics
 
-# ================= 轨迹批量分析 =================
 
 def analyze_trajectories(root_dir, templates_map=None, difficulty_map=None):
-    """
-    批量分析所有实验目录下的轨迹一致性    使用时间戳聚类将同一模板类型的不同子批次分开    """
+   
     exp_dirs = [d for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))
                 and re.match(r"outputs-", d)]
 
@@ -163,7 +159,6 @@ def analyze_trajectories(root_dir, templates_map=None, difficulty_map=None):
     for exp_dir in exp_dirs:
         exp_path = os.path.join(root_dir, exp_dir)
 
-        # 收集所有轨迹
         all_traces = []
         total_unknown_actions = 0
         for run_dir in os.listdir(exp_path):
@@ -189,7 +184,7 @@ def analyze_trajectories(root_dir, templates_map=None, difficulty_map=None):
                     "is_completed": is_comp,
                 })
 
-        # 用时间戳聚类得到实验组
+
         clusters = cluster_traces_by_timestamp(all_traces, time_threshold_seconds=180)
 
         multi_run_clusters = [c for c in clusters if len(c) > 1]
@@ -249,15 +244,14 @@ def analyze_trajectories(root_dir, templates_map=None, difficulty_map=None):
 
 
 def generate_outputs(report_data):
-    """生成分析报告：TXT 文本报告 + 柱状图（中文）"""
+ 
 
-    # 1. 导出期动作报告
+  
     with open("unknown_actions_report.txt", "w", encoding="utf-8") as fu:
-        fu.write("============= 期动作统报告 =============\n\n")
+        fu.write("============= 动作统报告 =============\n\n")
         for exp_dir, data in report_data.items():
-            fu.write(f"{exp_dir:<35} -> 期动作总数: {data['total_unknown_actions']}\n")
+            fu.write(f"{exp_dir:<35} -> 动作总数: {data['total_unknown_actions']}\n")
 
-    # 2. 详细分类 TXT 报告
     with open("trajectory_analysis_report.txt", "w", encoding="utf-8") as f:
         f.write("轨迹致分析报告\n")
         f.write("=" * 70 + "\n\n")
@@ -326,7 +320,7 @@ def generate_outputs(report_data):
 
             f.write("\n\n")
 
-    # 3. 生成柱状图
+
     plot_list = []
     for exp_dir, data in report_data.items():
         parts = exp_dir.split("-")
@@ -378,7 +372,7 @@ def generate_outputs(report_data):
     pos_div = x + 0.09
     pos_all = x + 0.27
 
-        # === 前三柱：总数（含未完成），柱内写数量，柱顶写百分比 ===
+
     rects1 = ax1.bar(pos_strict, df["strict_total"], width,
                      label="完全一致(Strict) 总数", color="#2ecc71")
     rects2_bottom = ax1.bar(pos_sim_mod, df["sim_total"], width,
@@ -389,7 +383,7 @@ def generate_outputs(report_data):
     rects4 = ax1.bar(pos_div, df["div_total"], width,
                      label="严重分歧 (Divergent) 总数", color="#e74c3c")
 
-    # === 第五柱：仅完成数（堆叠） ===
+
     rects4_s = ax1.bar(pos_all, df["strict_comp"], width, color="#27ae60",
                         label="全部完成-完全一致")
     rects4_m = ax1.bar(pos_all, df["sim_comp"], width, bottom=df["strict_comp"].values, color="#d4ac0d",
@@ -412,7 +406,7 @@ def generate_outputs(report_data):
     ax1.legend(fontsize=10, loc="upper left", bbox_to_anchor=(1, 1))
     ax1.yaxis.set_major_locator(MaxNLocator(integer=True))
 
-    # 柱内写数量，柱顶写百分比
+
     def autolabel(containers):
         for container in containers:
             for rect in container:
@@ -426,7 +420,7 @@ def generate_outputs(report_data):
 
     autolabel([rects1, rects2_bottom, rects2_top, rects4])
 
-    # 柱顶写占比（该类别占全部实验组的百分比，前三柱之和=100%）
+
     for i in range(len(df)):
         total_groups = df.iloc[i]["total_participating"]
         if total_groups <= 0:
@@ -458,7 +452,7 @@ def generate_outputs(report_data):
                              textcoords="offset points",
                              ha="center", va="bottom", fontweight="bold", fontsize=9,
                              color="#555")
-    # 标注堆叠柱状图各段（笛柱：柱内写数量）
+
     for idx, (rect, val) in enumerate(zip(rects4_s, df["strict_comp"])):
         if val > 0:
             ax1.annotate(str(int(val)),
