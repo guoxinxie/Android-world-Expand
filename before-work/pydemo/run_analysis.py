@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 """
-轨迹分析工具集 - 一键分析入口
+一键分析入口
 ============================
 用法:
   python run_analysis.py                           # 分析当前目录下所有 outputs-* 目录
   python run_analysis.py --dir /path/to/data       # 分析指定目录
   python run_analysis.py --dirs dir1 dir2          # 分析多个指定目录
 
-功能:
-  1. 轨迹一致性分析 (analyze_consistency.py) → chart + TXT report
-  2. 分组轨迹可视化 (visualize_trace.py)       → HTML report
-  3. 生成总索引页 index.html → 汇总所有结果
 """
 
 import os
@@ -23,7 +19,6 @@ from datetime import datetime
 
 
 def find_output_dirs(root_dir):
-    """查找所有 outputs-* 目录"""
     dirs = []
     for entry in os.listdir(root_dir):
         full = os.path.join(root_dir, entry)
@@ -33,7 +28,6 @@ def find_output_dirs(root_dir):
 
 
 def check_dependencies():
-    """检查必需的模块和文件是否存在"""
     missing = []
     required_files = ["task_matcher_utils.py", "analyze_consistency.py", "visualize_trace.py"]
     for f in required_files:
@@ -43,7 +37,6 @@ def check_dependencies():
 
 
 def run_analysis(script_name, root_dir, timeout=300):
-    """运行单个分析脚本"""
     print(f"  -> 运行 {script_name} ...")
     result = subprocess.run(
         [sys.executable, script_name],
@@ -63,7 +56,6 @@ def run_analysis(script_name, root_dir, timeout=300):
 
 
 def generate_index(output_dirs, output_dir):
-    """生成总索引 HTML 页面"""
     html = """<!DOCTYPE html>
 <html>
 <head>
@@ -95,7 +87,7 @@ def generate_index(output_dirs, output_dir):
         html += f'  <h3>{name}</h3>\n'
         html += f'  <ul>\n'
 
-        # HTML 报告
+        
         html_path = os.path.join(d, "grouped_report.html")
         if os.path.exists(html_path):
             rel = os.path.relpath(html_path, output_dir)
@@ -104,7 +96,7 @@ def generate_index(output_dirs, output_dir):
         html += f'  </ul>\n'
         html += f'</div>\n'
 
-    # 全局图表
+    
     chart_path = os.path.join(output_dir, "trajectory_consistency_chart.png")
     if os.path.exists(chart_path):
         rel = os.path.relpath(chart_path, output_dir)
@@ -126,15 +118,10 @@ def generate_index(output_dirs, output_dir):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="轨迹分析工具集 - 一键运行所有分析",
+        description=" 运行分析",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-示例:
-  python run_analysis.py
-  python run_analysis.py --dir /path/to/data
-  python run_analysis.py --dirs /path/to/dir1 /path/to/dir2
-  python run_analysis.py --skip-html    # 跳过 HTML 生成（只做一致性分析）
-  python run_analysis.py --skip-chart   # 跳过一致性分析（只做 HTML）
+              开始分析
         """,
     )
     parser.add_argument("--dir", default=None, help="分析根目录（默认为当前目录）")
@@ -155,12 +142,10 @@ def main():
 
     root_dir = os.path.abspath(root_dir)
     print(f"{'='*60}")
-    print(f"  轨迹分析工具集 v1.0")
-    print(f"{'='*60}")
     print(f"工作目录: {root_dir}")
     print()
 
-    # 检查依赖
+   
     missing = check_dependencies()
     if missing:
         print(f"[错误] 缺少必需文件: {', '.join(missing)}")
@@ -170,7 +155,7 @@ def main():
         print(f"  - visualize_trace.py")
         sys.exit(1)
 
-    # 查找数据目录
+    
     if not args.dirs:
         output_dirs = find_output_dirs(root_dir)
     if not output_dirs:
@@ -183,7 +168,7 @@ def main():
         print(f"  - {os.path.basename(d)}")
     print()
 
-    # 运行一致性分析
+    
     if not args.skip_chart:
         print("[1/2] 轨迹一致性分析...")
         success, _ = run_analysis("analyze_consistency.py", root_dir)
@@ -191,7 +176,7 @@ def main():
             print("  [跳过] 一致性分析失败，继续运行其他步骤")
         print()
 
-    # 运行 HTML 生成
+    
     if not args.skip_html:
         print("[2/2] 分组轨迹可视化...")
         success, _ = run_analysis("visualize_trace.py", root_dir)
@@ -199,13 +184,13 @@ def main():
             print("  [跳过] HTML 生成失败")
         print()
 
-    # 生成总索引页
+    
     if not args.skip_index:
         print("[+] 生成总索引页...")
         generate_index(output_dirs, root_dir)
         print()
 
-    # 汇总
+   
     print(f"{'='*60}")
     print(f"  分析完成!")
     print(f"{'='*60}")
@@ -224,12 +209,7 @@ def main():
     index = os.path.join(root_dir, "index.html")
     if os.path.exists(index):
         print(f"  [index] {index}")
-    print()
-    print(f"要复制到新项目，需要这 3 个文件:")
-    print(f"  task_matcher_utils.py")
-    print(f"  analyze_consistency.py")
-    print(f"  visualize_trace.py")
-    print(f"  以及可选的 task_metadata.json（增强任务名匹配）")
+
 
 
 if __name__ == "__main__":
