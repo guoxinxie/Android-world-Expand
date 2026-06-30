@@ -6,21 +6,21 @@ import sys
 import shutil
 from multiprocessing import Process
 
-# ================= 核心配置 =================
+# ================= 配置 =================
 TASKS_FILE = "all_tasks.txt"
-MAX_PARALLEL = 4  # 恢复四路并行
+MAX_PARALLEL = 4  # 四路模拟器并行
 MAX_RETRIES = 4  # 单次尝试失败后的重试
 
 BASE_OUTPUT_DIR = "outputs"  # 运行时统一存放轨迹的目录
 LOGS_DIR = "logs"  # 运行时统一存放日志的目录
 BASE_TMP_DIR = "/data/user_home/predata/xgx/android_world/tmp"
 
-# vLLM 服务配置 (通过 SSH 隧道转发到本地)
+# vLLM 服务配置 
 VLLM_ENDPOINT = "http://localhost:28000/v1"
 VLLM_API_KEY = "123456"
 MODEL_NAME = "qwen3-vl-8b"
 
-# 4 个物理资源槽
+# 4 个端口
 RESOURCE_POOL = [
     (5554, 8554),
     (5556, 8555),
@@ -55,7 +55,7 @@ def _start_periodic_tmp_cleanup(device_id, interval_sec=300):
   return stop_event
 
 
-# ============================================
+
 
 def wait_for_device(adb_port):
     device_id = f"emulator-{adb_port}"
@@ -89,7 +89,7 @@ def setup_device_state(adb_port):
     time.sleep(2)
 
 def prune_empty_dirs(path):
-    """递归删除目录下的所有空文件夹"""
+
     if not os.path.isdir(path):
         return
     for item in os.listdir(path):
@@ -152,10 +152,10 @@ def run_single_instance(task_name, worker_id, mode_config, adb_port, grpc_port):
             run_env['NO_PROXY'] = "localhost,127.0.0.1,::1"
             run_env['LLM_TEMPERATURE'] = str(llm_temp)
             
-            # vLLM 接口配置
+         
             run_env['OPENAI_API_BASE'] = VLLM_ENDPOINT
-            run_env['OPENAI_API_KEY'] = VLLM_API_KEY  # VllmWrapper 使用这个变量
-            run_env['VLLM_MODEL_NAME'] = MODEL_NAME   # VllmWrapper 使用的模型名称
+            run_env['OPENAI_API_KEY'] = VLLM_API_KEY  
+            run_env['VLLM_MODEL_NAME'] = MODEL_NAME   
 
             run_cmd = [
                 "python", "run.py",
@@ -191,14 +191,14 @@ def run_single_instance(task_name, worker_id, mode_config, adb_port, grpc_port):
                 except Exception:
                     pass
         
-        # 【新增】：模拟器死透之后，物理铲除它留下的所有临时垃圾！ 
+        
         try: 
             if os.path.exists(worker_tmp): 
                 import shutil 
                 shutil.rmtree(worker_tmp) 
-                print(f"[{run_label}] 🗑️ 已彻底清空残余缓存: {worker_tmp}") 
+                print(f"[{run_label}]  已彻底清空残余缓存: {worker_tmp}") 
         except Exception as e: 
-            print(f"[{run_label}] ⚠️ 清理缓存失败: {e}")
+            print(f"[{run_label}]  清理缓存失败: {e}")
 
     summary_path = os.path.join(abs_logs_dir, "task_summary.log")
     with open(summary_path, "a") as f:
@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
     for mode in MODES:
         mode_desc = mode['desc']
-        print(f"\n🚀 >>> 开始运行模式: {mode_desc} (vLLM Local) <<<")
+        print(f"\n >>> 开始运行模式: {mode_desc} (vLLM Local) <<<")
 
         if os.path.exists(BASE_OUTPUT_DIR): shutil.rmtree(BASE_OUTPUT_DIR)
         if os.path.exists(LOGS_DIR): shutil.rmtree(LOGS_DIR)
@@ -226,7 +226,7 @@ if __name__ == "__main__":
         os.makedirs(LOGS_DIR, exist_ok=True)
 
         for task in all_tasks:
-            print(f"\n  🎯 正在执行任务: {task} (4路并行中...)")
+            print(f"\n   正在执行任务: {task} (4路并行中...)")
             processes = []
             for i in range(MAX_PARALLEL):
                 adb_p, grpc_p = RESOURCE_POOL[i]
@@ -237,7 +237,7 @@ if __name__ == "__main__":
             for p in processes:
                 p.join()
 
-        print(f"\n✅ 模式 {mode_desc} 全部任务已跑完！开始整理并归档目录...")
+        print(f"\n模式 {mode_desc} 全部任务已跑完！开始整理并归档目录...")
         time.sleep(5)
 
         try:
@@ -252,4 +252,4 @@ if __name__ == "__main__":
             print(f"  └─ 归档完成！当前模式所有数据已保存在: {final_dir_name}/\n")
 
         except Exception as e:
-            print(f"  ⚠️ 目录整理发生异常: {e}")
+            print(f"  目录整理发生异常: {e}")
