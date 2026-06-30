@@ -19,11 +19,13 @@ from task_matcher_utils import (
     group_traces_experiment,
 )
 
+
 if platform.system() == "Windows":
     plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "sans-serif"]
 else:
     plt.rcParams["font.sans-serif"] = ["DejaVu Sans", "SimHei", "sans-serif"]
 plt.rcParams["axes.unicode_minus"] = False
+
 
 
 
@@ -142,7 +144,7 @@ def get_consistency_type_v2(sequences, thresholds=(0.0, 0.15, 0.35)):
 
 
 def analyze_trajectories(root_dir, templates_map=None, difficulty_map=None):
-   
+ 
     exp_dirs = [d for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))
                 and re.match(r"outputs-", d)]
 
@@ -159,6 +161,7 @@ def analyze_trajectories(root_dir, templates_map=None, difficulty_map=None):
     for exp_dir in exp_dirs:
         exp_path = os.path.join(root_dir, exp_dir)
 
+       
         all_traces = []
         total_unknown_actions = 0
         for run_dir in os.listdir(exp_path):
@@ -184,7 +187,7 @@ def analyze_trajectories(root_dir, templates_map=None, difficulty_map=None):
                     "is_completed": is_comp,
                 })
 
-
+        
         clusters = cluster_traces_by_timestamp(all_traces, time_threshold_seconds=180)
 
         multi_run_clusters = [c for c in clusters if len(c) > 1]
@@ -244,14 +247,13 @@ def analyze_trajectories(root_dir, templates_map=None, difficulty_map=None):
 
 
 def generate_outputs(report_data):
- 
-
-  
+    
     with open("unknown_actions_report.txt", "w", encoding="utf-8") as fu:
-        fu.write("============= 动作统报告 =============\n\n")
+        fu.write("============= 期动作统报告 =============\n\n")
         for exp_dir, data in report_data.items():
-            fu.write(f"{exp_dir:<35} -> 动作总数: {data['total_unknown_actions']}\n")
+            fu.write(f"{exp_dir:<35} -> 期动作总数: {data['total_unknown_actions']}\n")
 
+    
     with open("trajectory_analysis_report.txt", "w", encoding="utf-8") as f:
         f.write("轨迹致分析报告\n")
         f.write("=" * 70 + "\n\n")
@@ -320,7 +322,7 @@ def generate_outputs(report_data):
 
             f.write("\n\n")
 
-
+   
     plot_list = []
     for exp_dir, data in report_data.items():
         parts = exp_dir.split("-")
@@ -372,7 +374,7 @@ def generate_outputs(report_data):
     pos_div = x + 0.09
     pos_all = x + 0.27
 
-
+      
     rects1 = ax1.bar(pos_strict, df["strict_total"], width,
                      label="完全一致(Strict) 总数", color="#2ecc71")
     rects2_bottom = ax1.bar(pos_sim_mod, df["sim_total"], width,
@@ -382,7 +384,6 @@ def generate_outputs(report_data):
                          label="中等相似 (Moderate)", color="#9b59b6")
     rects4 = ax1.bar(pos_div, df["div_total"], width,
                      label="严重分歧 (Divergent) 总数", color="#e74c3c")
-
 
     rects4_s = ax1.bar(pos_all, df["strict_comp"], width, color="#27ae60",
                         label="全部完成-完全一致")
@@ -406,20 +407,19 @@ def generate_outputs(report_data):
     ax1.legend(fontsize=10, loc="upper left", bbox_to_anchor=(1, 1))
     ax1.yaxis.set_major_locator(MaxNLocator(integer=True))
 
-
+   
     def autolabel(containers):
         for container in containers:
             for rect in container:
                 h = rect.get_height()
                 if h > 0:
                     ax1.annotate(str(int(h)),
-                                 xy=(rect.get_x() + rect.get_width() / 2, h / 2),
+                                 xy=(rect.get_x() + rect.get_width() / 2, rect.get_y() + h / 2),
                                  xytext=(0, 0), textcoords="offset points",
                                  ha="center", va="center", fontweight="bold", fontsize=11,
                                  color="white" if h > 1.5 else "#333")
 
     autolabel([rects1, rects2_bottom, rects2_top, rects4])
-
 
     for i in range(len(df)):
         total_groups = df.iloc[i]["total_participating"]
@@ -452,7 +452,6 @@ def generate_outputs(report_data):
                              textcoords="offset points",
                              ha="center", va="bottom", fontweight="bold", fontsize=9,
                              color="#555")
-
     for idx, (rect, val) in enumerate(zip(rects4_s, df["strict_comp"])):
         if val > 0:
             ax1.annotate(str(int(val)),
