@@ -14,7 +14,7 @@ parallel_runner_vllm ──▶   analyze_consistency   ──▶ trajectory_cons
        ↓                                          ──▶ unknown_actions_report.txt
  trace.json + images   
   
-                            visualize_trace       ──▶ grouped_report.html (带一致性标签)
+                            visualize_trace       ──▶ grouped_report.html
                          
 ```
 
@@ -84,7 +84,7 @@ outputs-T0.0_FixedSeed/
 
 ---
 
-## 二、分析管道
+## 二、分析Pipeline
 
 ### run_analysis.py — 一键分析入口
 
@@ -119,7 +119,7 @@ JSONAction(action_type='status', goal_status='complete')
 
 新签名格式为 `action_type[_direction]@target_id`，保留 `index`（UI 控件身份标识）和 `app_name`，但不保留 `text` 内容：
 
-| 原始操作 | L1 签名 | 保留信息 |
+| 原始操作 | 签名 | 保留信息 |
 |:---|:---|:---|
 | `click(index=3)` | `click@3` | 点击了索引为 3 的控件 |
 | `long_press(index=0)` | `long_press@0` | 长按了索引为 0 的控件 |
@@ -148,9 +148,9 @@ JSONAction(action_type='status', goal_status='complete')
 
 对每个实验组（时间戳聚类后 >1 条轨迹的组），计算两两归一化 Levenshtein 距离，按最大值分入四个等级：
 
-| 类型 | type | 条件 | 含义 | 学术对应概念 |
+| 类型 | type | 条件 | 含义 | 对应概念 |
 |:---|:---:|:---|:---|:---|
-| **完全一致** (Strict) | 0 | 所有 pair 距离 = 0 | 所有轨迹的 L1 签名完全相同 | 完全复现性 |
+| **完全一致** (Strict) | 0 | 所有 pair 距离 = 0 | 所有轨迹的签名完全相同 | 完全复现性 |
 | **高度相似** (Highly Similar) | 1 | 最大距离 ≤ 0.15 相同轨迹＞=2/3时| 微小波动，约 8 步中至多 1 步差异或者当轨迹大于等于三条时，相同的轨迹为三分之二时也判定为高度相似| 近似复现性 |
 | **中等相似** (Moderately Similar) | 2 | 0.15 < 最大距离 ≤ 0.35 | 存在可观察但非根本性的路径差异 | 部分收敛性 |
 | **严重分歧** (Divergent) | 3 | 最大距离 > 0.35 | 超过三分之一路径不同，行为根本偏离 | 非复现性 |
@@ -269,7 +269,6 @@ python run_analysis.py
 | `analyze_consistency.py` | 轨迹一致性分析核心 |
 | `visualize_trace.py` | 交互式 HTML 报告生成 |
 | `task_matcher_utils.py` | 任务匹配、时间戳聚类、标签生成工具 |
-| `analysis_lib.py` | 轨迹解析、动作签名提取等通用库 |
 | `trajectory_analysis_report.txt` | 分析文本报告 |
 | `trajectory_consistency.json` | 一致性标记数据（供 HTML 使用） |
 | `index.html` | 总索引页 |
