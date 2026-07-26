@@ -218,7 +218,6 @@ def _get_agent(
 
 def _main() -> None:
   """Runs eval suite and gets rewards back."""
-  # 检查是否已经在运行中，防止嵌套调用
   if os.environ.get('ANDROID_WORLD_RUNNING') == '1':
       print('Warning: Detected nested run.py call. Skipping environment setup.')
       return
