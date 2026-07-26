@@ -25,7 +25,6 @@ plt.rcParams["axes.unicode_minus"] = False
 CONSISTENCY_LABELS = {0: "完全一致", 1: "高度一致", 2: "中等相似", 3: "严重分歧"}
 
 
-# ================= XML / 控件解析 =================
 
 def parse_xml_nodes(xml_path):
     if not os.path.exists(xml_path):
@@ -144,7 +143,6 @@ def extract_action_bounds(xml_path, ctrl):
     return node.get("bounds") if node else None
 
 
-# ================= 动作签名解析 =================
 
 def parse_action_signature(action_str):
     m_type = re.search(r"action_type='([^']+)'", str(action_str))
@@ -194,7 +192,6 @@ def get_image_src(rel_path):
     return rel_path.replace("\\", "/")
 
 
-# ================= 组件级动作签名（用于轨迹一致性） =================
 
 def get_component_from_xml(xml_path, index=None, bracket_info=None):
     """从 XML 文件中获取组件的稳定位信息。
@@ -214,7 +211,6 @@ def get_component_from_xml(xml_path, index=None, bracket_info=None):
     txt = (ctrl.get("text") or "").strip()
     cls = (ctrl.get("class") or "").strip()
     
-    # 尝试从 XML 中匹配 bracket_info 描述的组件
     if cd or rid or txt or cls:
         for node in nodes:
             node_cd = node.get("content_description", "")
@@ -226,7 +222,7 @@ def get_component_from_xml(xml_path, index=None, bracket_info=None):
                 name_parts = [node_cls, node_cd, node_rid, node_txt]
                 return "|".join(p for p in name_parts if p).lower()
     
-    # 退化为用 index 找 unique_id 对应的节点
+   
     if index is not None:
         for node in nodes:
             if node.get("unique_id") == index:
@@ -234,17 +230,17 @@ def get_component_from_xml(xml_path, index=None, bracket_info=None):
                               node.get("view_id_resource_name", ""), node.get("text", "")]
                 return "|".join(p for p in name_parts if p).lower()
     
-    # 最后退回 bracket 提取的 name
+   
     name = (cd or rid or txt or "").strip().lower()
     return name
 
 
 def component_name_of(step, xml_path=None):
-    """获取被操作组件的“稳定名字”，用于确认点击的是同一个组件。"""
+    
     action_field = str(step.get("action", step.get("model_output_action", "")))
     ctrl = parse_control_info(action_field)
     
-    # 如果有 XML，优先从 XML 验证组件身份
+    
     if xml_path:
         m_idx = re.search(r"index=(\d+)", str(step.get("model_output_action", "")))
         idx = int(m_idx.group(1)) if m_idx else None
@@ -252,17 +248,13 @@ def component_name_of(step, xml_path=None):
         if xml_name:
             return xml_name
     
-    # 退化为从 action bracket 提取
+    
     name = (ctrl.get("content_desc") or ctrl.get("resource_id") or ctrl.get("text") or "").strip().lower()
     return name
 
 
 def build_step_signature(step, xml_path=None):
-    """构造一步的动作签名。
-    签名 = action_type + index + component_identity
-    component_identity 来自 XML 或 action bracket，确保不同 XML 屏幕
-    点击相同 index 时不会误判为同一组件。
-    """
+    
     act = str(step.get("model_output_action", ""))
     action_field = str(step.get("action", act) or act)
     m_type = re.search(r"action_type='([^']+)'", act)
@@ -296,11 +288,6 @@ def build_step_signature(step, xml_path=None):
 
 
 def compress_sequence(seq):
-    """把连续的 scroll / swipe / wait 轨迹压缩成一次。
-    - scroll, swipe, wait 都归一为 SCROLL_WAIT
-    - 连续的 SCROLL_WAIT 合并为一个
-    - scroll 和 swipe 连续也算作一类（因为都属于滚动行为）
-    """
     norm = []
     for tok in seq:
         if tok.startswith("scroll") or tok.startswith("swipe") or tok.startswith("wait"):
@@ -330,13 +317,13 @@ def get_trace_info(trace_path):
         run_path = os.path.dirname(trace_path)
         raw_actions = [step.get("model_output_action", "") for step in data_list if "model_output_action" in step]
         
-        # 为每一步构建签名，传入对应的 XML 路径进行组件身份校验
+        
         parsed_actions = []
         for i, step in enumerate(data_list):
             xml_path = os.path.join(run_path, "xmls", f"{i}_before.xml")
             parsed_actions.append(build_step_signature(step, xml_path))
         
-        # 连续 scroll/wait 压缩为一次，再用于一致性比较
+        
         compressed_actions = compress_sequence(parsed_actions)
 
         unknown_count = sum(1 for act in parsed_actions if act == "unknown")
@@ -419,7 +406,7 @@ def group_traces_by_task_id(all_traces):
     return [groups[k] for k in sorted(groups.keys())]
 
 
-# ================= 轨迹批量分析 =================
+
 
 def analyze_trajectories(root_dir):
     exp_dirs = [d for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))
@@ -751,7 +738,6 @@ def generate_outputs(report_data):
     print(f"  -> {json_path}")
 
 
-# ================= HTML 可视化 =================
 
 CSS = """* { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; background: #1e1e1e; color: #e0e0e0; display: flex; height: 100vh; overflow: hidden; }
