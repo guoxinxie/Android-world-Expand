@@ -1,23 +1,12 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 clean_trajectories.py
-
-对 parallel_runner_vllm.py 产出的 outputs-* 目录做轨迹清洗与补全：
-
-1) 清理 none 动作：删除 model_output_action 为 None / none 的步骤，
-   并把 images/ 与 xmls/ 下的图片、xml 按剩余步骤重新顺序命名（0,1,2...），
-   同步修改 trace.json 中的 image_before / image_after 引用。
-
-2) 补全 complete：对于同一 task_id 的任务组，如果组内有一条或多条轨迹
-   输出了 status=complete，而某些轨迹没有输出 complete，但其最后一步的
-   "动作 + 组件(xml)" 与某条已完成轨迹的倒数第二步（完成前的最后真实动作）
-   一致，则判定该轨迹也已完成：在轨迹末尾追加一条 status=complete 步骤，
-   其 image_before / image_after / xml 直接复制前一步的 after 图片与 xml。
-
-用法:
     python clean_trajectories.py [ROOT_DIR] [--dry-run]
 如不传 ROOT_DIR，默认使用当前目录。--dry-run 只打印不修改。
+
+--dry-run作用：只打印会做什么，不实际修改文件。用于两个操作：
+renumber_run（重命名子目录）：只显示会怎么重命名，不真正改名
+propagate_complete（补全complete状态）：只显示会改哪些文件，不真正写入
+
 """
 
 import os
@@ -28,10 +17,9 @@ import shutil
 import argparse
 
 
-# ============================ 基础工具 ============================
 
 def is_none_action(step):
-    """判断某个 step 是否为 'none' / 空动作。"""
+ 
     a = step.get("model_output_action")
     if a is None:
         return True
@@ -44,7 +32,7 @@ def is_none_action(step):
 
 
 def find_file(directory, stem):
-    """在 directory 中按 stem 查找文件，自动尝试常见扩展名。"""
+    
     if not os.path.isdir(directory):
         return None
     for ext in (".jpg", ".jpeg", ".png", ".xml"):
@@ -60,7 +48,7 @@ def get_action_type(action_str):
 
 
 def get_bracket(action_str):
-    """提取动作字符串末尾的 [组件信息] 部分。"""
+   
     m = re.search(r"\[(.*)\]\s*$", str(action_str))
     return m.group(1) if m else ""
 
@@ -87,7 +75,6 @@ def parse_control_info(action_str):
 
 
 def component_name_of(action_str):
-    """得到被操作组件的“名字”（用于判定是否同一个组件）。"""
     ctrl = parse_control_info(str(action_str))
     name = (ctrl.get("content_desc") or ctrl.get("resource_id") or ctrl.get("text") or "").strip().lower()
     return name
@@ -98,18 +85,17 @@ def is_complete_step(step):
     return "action_type='status'" in a and "goal_status='complete'" in a
 
 
-def last_real_step(steps):
-    """返回轨迹中最后一条真实（非 status）动作步骤；都非 status 时返回最后一条。"""
+def last_real_step(steps)
     for s in reversed(steps):
         if not is_complete_step(s):
             return s
     return steps[-1] if steps else None
 
 
-# ============================ 1) 清理 none + 重命名 ============================
+
 
 def renumber_run(run_path, dry_run=False):
-    """清理 run 目录里的 none 步骤，并重命名图片/xml，返回 (移除步数, 总步数)。"""
+    
     trace_file = os.path.join(run_path, "trace.json")
     if not os.path.exists(trace_file):
         return 0, 0
@@ -133,7 +119,7 @@ def renumber_run(run_path, dry_run=False):
     rename_ops = []  # (src, dst)
 
     if not keep:
-        # 整个轨迹都是 none -> 直接删除该空轨迹目录
+        
         if not dry_run:
             shutil.rmtree(run_path, ignore_errors=True)
         return removed, 0
@@ -164,7 +150,7 @@ def renumber_run(run_path, dry_run=False):
               f"{len(data)} -> {len(new_data)}; 重命名 {len(rename_ops)} 个文件")
         return removed, len(new_data)
 
-    # 两阶段重命名，避免同目录内文件名碰撞
+    
     temps = []
     for src, dst in rename_ops:
         tmp = dst + ".tmprn"
@@ -181,10 +167,10 @@ def renumber_run(run_path, dry_run=False):
     return removed, len(new_data)
 
 
-# ============================ 2) 补全 complete ============================
+
 
 def steps_match(incomplete_last, complete_final):
-    """判断 incomplete 轨迹的最后一步，是否与 complete 轨迹完成前的最后真实动作一致。"""
+    
     a1 = incomplete_last.get("action") or incomplete_last.get("model_output_action")
     a2 = complete_final.get("action") or complete_final.get("model_output_action")
     a1, a2 = str(a1), str(a2)
@@ -196,10 +182,10 @@ def steps_match(incomplete_last, complete_final):
 
     b1, b2 = get_bracket(a1), get_bracket(a2)
     if b1 and b2:
-        # 组件名（xml 中组件信息）一致即视为点击了同一个组件
+       
         return b1 == b2
 
-    # 退化为比较 index
+    
     i1 = re.search(r"index=(\d+)", a1)
     i2 = re.search(r"index=(\d+)", a2)
     if i1 and i2:
@@ -208,14 +194,14 @@ def steps_match(incomplete_last, complete_final):
 
 
 def propagate_complete(exp_dir, dry_run=False):
-    """在单个 outputs-* 实验目录内，对任务组补全 complete。返回补全的轨迹数。"""
+    
     run_dirs = []
     for d in sorted(os.listdir(exp_dir)):
         dp = os.path.join(exp_dir, d)
         if os.path.isdir(dp) and os.path.exists(os.path.join(dp, "trace.json")):
             run_dirs.append(dp)
 
-    # 按 task_id 分组
+    
     groups = {}
     for dp in run_dirs:
         with open(os.path.join(dp, "trace.json"), "r", encoding="utf-8") as f:
@@ -244,7 +230,7 @@ def propagate_complete(exp_dir, dry_run=False):
             if not any(steps_match(last, cfs) for cfs in complete_final_steps):
                 continue
 
-            # 匹配成功 -> 追加 complete 步骤
+            
             prev_idx = len(data) - 1
             new_idx = len(data)
             images_dir = os.path.join(dp, "images")
@@ -286,7 +272,6 @@ def propagate_complete(exp_dir, dry_run=False):
     return fixed
 
 
-# ============================ 入口 ============================
 
 def find_exp_dirs(root):
     dirs = []
@@ -315,7 +300,7 @@ def main():
 
     for exp in exp_dirs:
         print(f"\n=== 处理 {os.path.basename(exp)} ===")
-        # 第一步：清理 + 重命名
+        
         for d in sorted(os.listdir(exp)):
             dp = os.path.join(exp, d)
             if not os.path.isdir(dp):
@@ -324,7 +309,7 @@ def main():
             if removed > 0:
                 total_removed += removed
                 total_renamed_runs += 1
-        # 第二步：补全 complete（依赖第一步结果）
+        
         fixed = propagate_complete(exp, dry_run=args.dry_run)
         total_fixed += fixed
         print(f"  清理 none 步骤 {total_removed} 个（涉及 {total_renamed_runs} 条轨迹）；"
